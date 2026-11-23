@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+{% block title %}AMTS-Engine | Report {{ job.id }}{% endblock %}
+
+{% block content %}
+<section class="report-header">
+    <div class="report-header-content">
+        <div class="report-title-row">
+            <h1 class="report-title">Threat Analysis Report</h1>
+            <span class="status-badge status-{{ job.status|lower }}">{{ job.status }}</span>
+        </div>
+        <p class="report-subtitle">Job {{ job.id }} | {{ job.filename }}</p>
+    </div>
+</section>
+
+<section class="report-grid">
+    <div class="report-card glass-card metadata-card">
+        <h2 class="card-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+            </svg>
+            File Metadata
+        </h2>
+        <div class="metadata-grid">
+            <div class="meta-item">
+                <span class="meta-label">Job ID</span>
+                <span class="meta-value mono-text">{{ job.id }}</span>
+            </div>
+            <div class="meta-item">
+                <span class="meta-label">Filename</span>
+                <span class="meta-value">{{ job.filename }}</span>
+            </div>
+            <div class="meta-item full-width">
+                <span class="meta-label">SHA-256</span>
+                <span class="meta-value mono-text hash-display">{{ job.sha256 }}</span>
+            </div>
+            <div class="meta-item">
+                <span class="meta-label">Submitted</span>
+                <span class="meta-value">{{ job.created_at.strftime('%Y-%m-%d %H:%M:%S UTC') if job.created_at else 'N/A' }}</span>
+            </div>
+            <div class="meta-item">
+                <span class="meta-label">Completed</span>
+                <span class="meta-value">{{ job.completed_at.strftime('%Y-%m-%d %H:%M:%S UTC') if job.completed_at else 'Pending' }}</span>
+            </div>
+        </div>
+    </div>
+
+    {% if job.static_result %}
+    {% set static = job.static_result.to_dict() %}
+    <div class="report-card glass-card static-card">
+        <h2 class="card-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                <line x1="8" y1="21" x2="16" y2="21"/>
+                <line x1="12" y1="17" x2="12" y2="21"/>
+            </svg>
+            Static Decomposition
+        </h2>
+
+        <div class="static-meta-row">
+            <div class="stat-card">
+                <span class="stat-label">Architecture</span>
+                <span class="stat-value">{{ static.architecture or 'Unknown' }}</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">Sections</span>
+                <span class="stat-value">{{ static.section_count }}</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">Compiled</span>
+                <span class="stat-value">{{ static.compilation_timestamp or 'Unknown' }}</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">Import Hash</span>
+                <span class="stat-value mono-text">{{ static.imphash or 'N/A' }}</span>
+            </div>
+        </div>
+
+        {% if static.sections %}
+        <h3 class="subsection-title">Section Entropy Analysis</h3>
+        <div class="entropy-chart">
+            {% for section in static.sections %}
+            <div class="entropy-row">
+                <span class="entropy-label mono-text">{{ section.name }}</span>
+                <div class="entropy-bar-container">
+                    <div class="entropy-bar {% if section.is_packed %}entropy-packed{% else %}entropy-normal{% endif %}"
+                         style="width: {{ (section.entropy / 8 * 100)|round(1) }}%">
+                    </div>
+                </div>
+                <span class="entropy-value {% if section.is_packed %}text-danger{% endif %}">
+                    {{ section.entropy }}
+                    {% if section.is_packed %}<span class="packed-badge">PACKED</span>{% endif %}
+                </span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if static.suspicious_strings %}
+        <h3 class="subsection-title">Suspicious Indicators ({{ static.suspicious_strings|length }})</h3>
+        <div class="strings-container">
+            <table class="strings-table">
+                <thead>
+                    <tr>
+                        <th>Value</th>
+                        <th>Type</th>
+                        <th>Fidelity</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in static.suspicious_strings %}
+                    <tr>
+                        <td class="mono-text">{{ s.value }}</td>
+                        <td>
+                            <span class="type-badge type-{{ s.type }}">{{ s.type|replace('_', ' ')|title }}</span>
+                        </td>
+                        <td>
+                            {% set fid = s.fidelity if s.fidelity else ('high' if s.type in ['url','ip_address','domain'] else 'medium') %}
+                            <span class="fidelity-badge fidelity-{{ fid }}">{{ fid|upper }}</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state"><p>No suspicious indicators detected in static analysis.</p></div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% if job.dynamic_result %}
+    {% set dynamic = job.dynamic_result.to_dict() %}
+    <div class="report-card glass-card dynamic-card">
+        <h2 class="card-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+            </svg>
+            Dynamic Emulation
+            {% if dynamic.emulation_success %}
+            <span class="emulation-badge success">Completed</span>
+            {% else %}
+            <span class="emulation-badge warning">Unavailable</span>
+            {% endif %}
+        </h2>
+
+        {% if not dynamic.emulation_success %}
+        <div class="sandbox-info-box">
+            <div class="sandbox-info-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+            </div>
+            <div class="sandbox-info-text">
+                <strong>Speakeasy CPU Emulator Required</strong>
+                <p>Dynamic analysis uses <strong>Speakeasy</strong>, a user-space CPU emulator built on the Unicorn engine. It emulates x86/x64 instructions entirely in memory. No real code executes on your OS. No files, registry keys, or network connections are created on the host. It is fully safe to emulate malicious files.</p>
+                <code class="install-cmd">pip install speakeasy-emulator</code>
+            </div>
+        </div>
+        {% else %}
+
+        {% if dynamic.behaviors %}
+        <div class="behavior-timeline">
+            {% for behavior in dynamic.behaviors %}
+            <div class="behavior-entry severity-{{ behavior.severity|lower|replace(' ', '-') }}">
+                <div class="behavior-header">
+                    <span class="behavior-time mono-text">{{ behavior.elapsed_ms }}ms</span>
+                    <span class="severity-badge severity-tag-{{ behavior.severity|lower|replace(' ', '-') }}">{{ behavior.severity }}</span>
+                </div>
+                <div class="behavior-function mono-text">{{ behavior.function }}</div>
+                {% if behavior.arguments %}
+                <div class="behavior-args">
+                    {% for key, val in behavior.arguments.items() %}
+                    <span class="arg-item"><span class="arg-key">{{ key }}:</span> {{ val }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <p>Emulation completed but no significant behaviors were captured. The sample may be benign, packed, or require specific runtime conditions.</p>
+        </div>
+        {% endif %}
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% if job.yara_rule %}
+    {% set yara = job.yara_rule.to_dict() %}
+    <div class="report-card glass-card yara-card">
+        <h2 class="card-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+            YARA Rule
+            <span class="validation-badge validation-{{ yara.validation_status|lower }}">
+                {{ yara.validation_status }}
+            </span>
+        </h2>
+
+        {% if yara.false_positive_count > 0 %}
+        <div class="fp-notice">
+            <span>{{ yara.false_positive_count }} false positive(s) were detected and remediated during validation.</span>
+        </div>
+        {% endif %}
+
+        <div class="rule-container">
+            <div class="rule-toolbar">
+                <span class="rule-name mono-text">{{ yara.rule_name }}.yar</span>
+                <button class="btn btn-sm btn-primary" id="copyRuleBtn" onclick="copyRule()">
+                    Copy Rule
+                </button>
+                <a href="/api/rules/{{ job.id }}" class="btn btn-sm btn-ghost" download>
+                    Download .yar
+                </a>
+            </div>
+            <pre class="rule-code"><code id="ruleText">{{ yara.rule_text }}</code></pre>
+        </div>
+    </div>
+    {% endif %}
+</section>
+
+<div class="report-actions">
+    <a href="/" class="btn btn-ghost">Back to Dashboard</a>
+    <a href="/api/report/{{ job.id }}" class="btn btn-primary" target="_blank">View Raw JSON</a>
+</div>
+{% endblock %}

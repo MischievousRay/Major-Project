@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}AMTS-Engine | Upload & Analyze{% endblock %}
+
+{% block content %}
+<section class="hero-section">
+    <div class="hero-content">
+        <h1 class="hero-title">Malware Triage Engine</h1>
+        <p class="hero-subtitle">Upload a Windows PE executable for automated static decomposition, dynamic emulation, and YARA rule synthesis</p>
+    </div>
+</section>
+
+<section class="upload-section">
+    <div class="upload-card glass-card">
+        <div id="dropzone" class="dropzone">
+            <div class="dropzone-content">
+                <div class="dropzone-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="17 8 12 3 7 8"/>
+                        <line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                </div>
+                <p class="dropzone-text">Drag and drop a PE executable here</p>
+                <p class="dropzone-hint">or click to browse files (.exe, .dll, .sys)</p>
+                <input type="file" id="fileInput" class="file-input" accept=".exe,.dll,.sys,.scr,.ocx">
+            </div>
+        </div>
+
+        <div id="uploadProgress" class="upload-progress hidden">
+            <div class="progress-info">
+                <span id="uploadFileName" class="progress-filename"></span>
+                <span id="uploadPercent" class="progress-percent">0%</span>
+            </div>
+            <div class="progress-bar-container">
+                <div id="progressBar" class="progress-bar"></div>
+            </div>
+            <p id="uploadStatus" class="progress-status">Uploading...</p>
+        </div>
+
+        <div id="uploadResult" class="upload-result hidden"></div>
+    </div>
+</section>
+
+{% if error %}
+<section class="error-section">
+    <div class="error-card glass-card">
+        <p class="error-text">{{ error }}</p>
+    </div>
+</section>
+{% endif %}
+
+<section class="jobs-section">
+    <div class="section-header">
+        <h2 class="section-title">Recent Submissions</h2>
+        <button id="refreshBtn" class="btn btn-ghost" onclick="location.reload()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="23 4 23 10 17 10"/>
+                <polyline points="1 20 1 14 7 14"/>
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+            </svg>
+            Refresh
+        </button>
+    </div>
+
+    <div class="jobs-table-container glass-card">
+        {% if jobs %}
+        <table class="jobs-table" id="jobsTable">
+            <thead>
+                <tr>
+                    <th>Job ID</th>
+                    <th>Filename</th>
+                    <th>SHA-256</th>
+                    <th>Status</th>
+                    <th>Submitted</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for job in jobs %}
+                <tr data-job-id="{{ job.id }}" data-status="{{ job.status }}">
+                    <td class="mono-text">{{ job.id }}</td>
+                    <td class="filename-cell" title="{{ job.filename }}">{{ job.filename }}</td>
+                    <td class="hash-cell mono-text" title="{{ job.sha256 }}">{{ job.sha256[:16] }}...</td>
+                    <td>
+                        <span class="status-badge status-{{ job.status|lower }}">
+                            {{ job.status }}
+                        </span>
+                    </td>
+                    <td class="time-cell">{{ job.created_at.strftime('%Y-%m-%d %H:%M') if job.created_at else 'N/A' }}</td>
+                    <td>
+                        {% if job.status == 'COMPLETED' %}
+                        <a href="/report/{{ job.id }}" class="btn btn-sm btn-primary">View Report</a>
+                        {% elif job.status == 'EXECUTING' or job.status == 'QUEUED' %}
+                        <span class="btn btn-sm btn-ghost polling-indicator">Processing...</span>
+                        {% else %}
+                        <span class="btn btn-sm btn-ghost disabled">Failed</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <p>No submissions yet. Upload a file to get started.</p>
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

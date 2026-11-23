@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AMTS-Engine Project Synopsis</title>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+        font-family: 'Times New Roman', Times, serif;
+        font-size: 12pt;
+        line-height: 1.5;
+        color: #000;
+        background: #f0f0f0;
+    }
+
+    .page {
+        width: 210mm;
+        min-height: 297mm;
+        margin: 10mm auto;
+        padding: 25mm 25mm 25mm 30mm;
+        background: #fff;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+    }
+
+    @media print {
+        body { background: #fff; }
+        .page { margin: 0; padding: 25mm 25mm 25mm 30mm; width: 100%; box-shadow: none; page-break-after: always; }
+        .page-break { page-break-before: always; }
+    }
+
+    h1.main-title {
+        font-size: 16pt;
+        font-weight: bold;
+        text-align: center;
+        text-transform: uppercase;
+        letter-spacing: 0.5pt;
+        margin-bottom: 6pt;
+        line-height: 1.4;
+    }
+
+    h1.degree-title {
+        font-size: 13pt;
+        font-weight: bold;
+        text-align: center;
+        margin-bottom: 4pt;
+    }
+
+    .center { text-align: center; }
+    hr.divider { border: none; border-top: 1.5px solid #000; margin: 14pt 0; }
+
+    h2.chapter {
+        font-size: 13pt;
+        font-weight: bold;
+        text-transform: uppercase;
+        margin-top: 18pt;
+        margin-bottom: 10pt;
+        letter-spacing: 0.3pt;
+    }
+
+    h3.section {
+        font-size: 12pt;
+        font-weight: bold;
+        margin-top: 14pt;
+        margin-bottom: 6pt;
+    }
+
+    p {
+        text-align: justify;
+        text-indent: 24pt;
+        margin-bottom: 8pt;
+    }
+
+    p.no-indent { text-indent: 0; }
+
+    ul, ol { margin-left: 36pt; margin-bottom: 8pt; }
+    li { margin-bottom: 4pt; text-align: justify; }
+
+    .toc-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        margin-bottom: 5pt;
+        font-size: 12pt;
+    }
+
+    .toc-dots {
+        flex: 1;
+        border-bottom: 1px dotted #666;
+        margin: 0 6pt 3pt;
+    }
+
+    .toc-sub { padding-left: 20pt; }
+    .toc-bold { font-weight: bold; }
+
+    .abstract-box {
+        border: 1pt solid #000;
+        padding: 14pt 16pt;
+        margin: 14pt 0;
+    }
+
+    .abstract-box p { text-indent: 0; text-align: justify; }
+
+    .ref-item {
+        padding-left: 24pt;
+        text-indent: -24pt;
+        margin-bottom: 8pt;
+        text-align: justify;
+    }
+
+    .italic { font-style: italic; }
+    .bold { font-weight: bold; }
+    .underline { text-decoration: underline; }
+
+    table.plan {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 11pt;
+        margin: 10pt 0;
+    }
+
+    table.plan th {
+        border: 1pt solid #333;
+        padding: 5pt 7pt;
+        background: #e8e8e8;
+        font-weight: bold;
+        text-align: left;
+    }
+
+    table.plan td {
+        border: 1pt solid #333;
+        padding: 5pt 7pt;
+        vertical-align: top;
+    }
+
+    table.plan tr:nth-child(even) td { background: #f8f8f8; }
+
+    .diagram {
+        border: 1pt solid #555;
+        padding: 10pt;
+        margin: 12pt 0;
+        font-family: 'Courier New', monospace;
+        font-size: 9.5pt;
+        white-space: pre;
+        line-height: 1.4;
+        background: #fafafa;
+        overflow-x: auto;
+    }
+
+    .fig-caption {
+        text-align: center;
+        font-style: italic;
+        font-size: 11pt;
+        margin-top: 4pt;
+        margin-bottom: 10pt;
+    }
+</style>
+</head>
+<body>
+
+<!-- COVER PAGE -->
+<div class="page">
+    <div style="text-align:center; margin-top:50pt;">
+        <p class="no-indent" style="font-size:13pt; font-weight:bold;">
+            A Project Synopsis Submitted in Partial Fulfillment<br>
+            of the Requirements for the Award of the Degree of
+        </p>
+        <br>
+        <h1 class="main-title">Bachelor of Technology</h1>
+        <p class="no-indent" style="font-size:12pt; font-weight:bold; text-align:center;">in</p>
+        <h1 class="degree-title">Computer Science and Engineering</h1>
+    </div>
+
+    <hr class="divider">
+
+    <div style="text-align:center; margin-top:20pt;">
+        <p class="no-indent" style="font-size:15pt; font-weight:bold; text-align:center; line-height:1.8;">
+            AMTS-Engine: Automated Malware Triage and<br>
+            Dynamic YARA Rule Synthesis Engine
+        </p>
+    </div>
+
+    <hr class="divider">
+
+    <div style="text-align:center; margin-top:20pt; font-size:12pt; line-height:2.2;">
+        <p class="no-indent" style="font-weight:bold; text-align:center;">Submitted By:</p>
+        <p class="no-indent" style="text-align:center;">[Student Name(s)]</p>
+        <p class="no-indent" style="text-align:center;">[Enrollment Number(s)]</p>
+        <br>
+        <p class="no-indent" style="font-weight:bold; text-align:center;">Under the Guidance of:</p>
+        <p class="no-indent" style="text-align:center;">[Supervisor Name and Designation]</p>
+        <br>
+        <p class="no-indent" style="font-weight:bold; text-align:center;">Department of Computer Science and Engineering</p>
+        <p class="no-indent" style="text-align:center;">[Institution Name]</p>
+        <p class="no-indent" style="text-align:center;">[City, State] &#8212; [Academic Year]</p>
+    </div>
+</div>
+
+<!-- ABSTRACT -->
+<div class="page page-break">
+    <h2 class="chapter" style="text-align:center;">Abstract</h2>
+
+    <div class="abstract-box">
+        <p>
+            The exponential growth in malware volume has rendered manual analysis workflows inadequate for modern threat intelligence operations. Security analysts face the dual burden of triaging large numbers of unknown binaries while simultaneously producing high-quality detection signatures. This project proposes the Automated Malware Triage and Dynamic YARA Rule Synthesis Engine (AMTS-Engine), a continuous, pipeline-driven system that accepts an arbitrary Windows Portable Executable (PE) binary, subjects it to dual-phase analysis comprising static decomposition and CPU-emulated dynamic execution, and autonomously synthesises and validates a YARA detection rule from the combined findings.
+        </p>
+        <p style="margin-top:8pt;">
+            The static phase leverages PE header parsing to extract import hash, section entropy, compilation timestamp, architecture metadata, and suspicious string indicators classified into high- and medium-fidelity tiers. The dynamic phase employs the Speakeasy CPU emulator, which executes the binary within an emulated x86/x64 environment under the Unicorn engine without exposing the host operating system to any execution risk. Behavioural events captured during emulation are used to augment the rule with network indicators and high-severity API sequences. The resulting YARA rule undergoes automated false positive remediation against a corpus of clean system binaries before being served through a RESTful API and a web dashboard.
+        </p>
+        <p style="margin-top:8pt;">
+            The system is expected to reduce the time-to-signature for novel malware families from hours to seconds, enabling scalable deployment in threat intelligence pipelines, Security Operations Centres, and digital forensics laboratories.
+        </p>
+    </div>
+
+    <p class="no-indent" style="margin-top:14pt;">
+        <span class="bold"><span class="underline">Keywords:</span></span>
+        Malware Analysis, YARA Rules, PE Analysis, CPU Emulation, Speakeasy, Static Analysis, Dynamic Analysis, Threat Intelligence, Rule Synthesis, Security Automation.
+    </p>
+</div>
+
+<!-- TABLE OF CONTENTS -->
+<div class="page page-break">
+    <h2 class="chapter" style="text-align:center;">Table of Contents</h2>
+    <div style="margin-top:14pt;">
+        <div class="toc-row toc-bold"><span>1.&nbsp;&nbsp;Introduction</span><span class="toc-dots"></span><span>4</span></div>
+        <div class="toc-row toc-sub"><span>1.1&nbsp;&nbsp;Background</span><span class="toc-dots"></span><span>4</span></div>
+        <div class="toc-row toc-sub"><span>1.2&nbsp;&nbsp;Motivation</span><span class="toc-dots"></span><span>4</span></div>
+        <div class="toc-row toc-sub"><span>1.3&nbsp;&nbsp;Scope of the Project</span><span class="toc-dots"></span><span>5</span></div>
+        <div class="toc-row toc-bold" style="margin-top:5pt;"><span>2.&nbsp;&nbsp;Literature Survey</span><span class="toc-dots"></span><span>5</span></div>
+        <div class="toc-row toc-sub"><span>2.1&nbsp;&nbsp;Automated YARA Rule Generation</span><span class="toc-dots"></span><span>5</span></div>
+        <div class="toc-row toc-sub"><span>2.2&nbsp;&nbsp;CPU Emulation for Malware Analysis</span><span class="toc-dots"></span><span>6</span></div>
+        <div class="toc-row toc-sub"><span>2.3&nbsp;&nbsp;Machine Learning-Assisted Triage</span><span class="toc-dots"></span><span>6</span></div>
+        <div class="toc-row toc-sub"><span>2.4&nbsp;&nbsp;Summary of Literature Findings</span><span class="toc-dots"></span><span>7</span></div>
+        <div class="toc-row toc-bold" style="margin-top:5pt;"><span>3.&nbsp;&nbsp;Problem Definition</span><span class="toc-dots"></span><span>7</span></div>
+        <div class="toc-row toc-sub"><span>3.1&nbsp;&nbsp;Identified Gaps</span><span class="toc-dots"></span><span>7</span></div>
+        <div class="toc-row toc-sub"><span>3.2&nbsp;&nbsp;Problem Statement</span><span class="toc-dots"></span><span>8</span></div>
+        <div class="toc-row toc-bold" style="margin-top:5pt;"><span>4.&nbsp;&nbsp;Objectives</span><span class="toc-dots"></span><span>8</span></div>
+        <div class="toc-row toc-bold" style="margin-top:5pt;"><span>5.&nbsp;&nbsp;Proposed Design</span><span class="toc-dots"></span><span>9</span></div>
+        <div class="toc-row toc-sub"><span>5.1&nbsp;&nbsp;System Architecture Overview</span><span class="toc-dots"></span><span>9</span></div>
+        <div class="toc-row toc-sub"><span>5.2&nbsp;&nbsp;Pipeline Phases</span><span class="toc-dots"></span><span>9</span></div>
+        <div class="toc-row toc-sub"><span>5.3&nbsp;&nbsp;Technology Stack</span><span class="toc-dots"></span><span>11</span></div>
+        <div class="toc-row toc-bold" style="margin-top:5pt;"><span>6.&nbsp;&nbsp;Solution Strategy</span><span class="toc-dots"></span><span>11</span></div>
+        <div class="toc-row toc-bold" style="margin-top:5pt;"><span>7.&nbsp;&nbsp;Expected Outcome</span><span class="toc-dots"></span><span>12</span></div>
+        <div class="toc-row toc-bold" style="margin-top:5pt;"><span>8.&nbsp;&nbsp;Work Plan</span><span class="toc-dots"></span><span>13</span></div>
+        <div class="toc-row toc-bold" style="margin-top:5pt;"><span>References</span><span class="toc-dots"></span><span>14</span></div>
+    </div>
+</div>
+
+<!-- CHAPTER 1: INTRODUCTION -->
+<div class="page page-break">
+    <h2 class="chapter">1. Introduction</h2>
+
+    <h3 class="section">1.1 Background</h3>
+    <p>
+        The modern cybersecurity landscape is characterised by an unprecedented scale of malware proliferation. According to the AV-TEST Institute, over 450,000 new malware samples are registered every day, a volume that has grown consistently over the past decade. Malware families such as ransomware, banking trojans, rootkits, and advanced persistent threats continue to evolve rapidly, leveraging techniques such as polymorphic code, packing, process hollowing, and living-off-the-land strategies to evade detection. Traditional signature-based antivirus products are fundamentally reactive and struggle to cope with the zero-day problem, where no prior signature exists for a newly encountered variant.
+    </p>
+    <p>
+        The standard malware analysis workflow in a Security Operations Centre involves two complementary phases. Static analysis examines the binary structure of the file without executing it, extracting features such as PE headers, import and export tables, strings, entropy measurements, and cryptographic hashes. Dynamic analysis executes the sample in a controlled environment and observes its runtime behaviour including file system modifications, network communications, process injections, and registry changes. Both phases complement each other: static analysis is fast and safe but can be defeated by obfuscation, while dynamic analysis reveals true intent but requires safe execution infrastructure.
+    </p>
+    <p>
+        Once analysis is complete, the findings must be translated into machine-readable detection signatures. YARA is the dominant open standard for this purpose, enabling analysts to describe patterns in binary files using a rule-based language. Manually crafting a well-scoped, low-false-positive YARA rule from raw analysis output remains a highly skilled task requiring significant analyst expertise and time.
+    </p>
+
+    <h3 class="section">1.2 Motivation</h3>
+    <p>
+        The primary motivation for this project is the widening gap between the speed at which new malware appears and the speed at which detection rules can be produced. In incident response scenarios, the window between malware deployment and rule availability is a critical exposure period during which organisations remain unprotected. Automation of the triage-to-rule pipeline has the potential to collapse this window from hours or days to a matter of seconds.
+    </p>
+    <p>
+        Furthermore, existing commercial sandboxes are either resource-intensive, require cloud submission of potentially sensitive samples, or are cost-prohibitive for smaller organisations. A self-contained, open-source alternative deployable on commodity hardware within a private network addresses a significant operational need for organisations with strict data residency requirements.
+    </p>
+    <p>
+        The use of CPU emulation via the Speakeasy framework represents a modern approach to dynamic analysis that eliminates the overhead of virtual machine provisioning, provides deterministic execution, and is inherently resistant to VM-detection evasion techniques that rely on hypervisor artefacts such as CPUID responses or timing anomalies.
+    </p>
+
+    <h3 class="section">1.3 Scope of the Project</h3>
+    <p>
+        The AMTS-Engine targets Windows PE binaries including executable files (.exe), dynamic link libraries (.dll), and kernel drivers (.sys). The system provides an end-to-end automated pipeline from file ingestion through static decomposition, CPU-emulated dynamic analysis, YARA rule synthesis, and false positive validation. The project is designed for deployment in a private network environment and does not depend on any external cloud services or third-party threat intelligence feeds.
+    </p>
+</div>
+
+<!-- CHAPTER 2: LITERATURE SURVEY -->
+<div class="page page-break">
+    <h2 class="chapter">2. Literature Survey</h2>
+
+    <p>
+        A review of recent literature reveals significant academic and industry interest in automating malware analysis and rule generation. Three particularly relevant works, all published after 2020, are reviewed below.
+    </p>
+
+    <h3 class="section">2.1 Automated YARA Rule Generation from Malware Samples</h3>
+    <p>
+        Bayer et al. [1] presented a systematic framework for automated YARA rule generation that combines static feature extraction with a clustering-based approach to identify shared byte sequences across malware families. The authors demonstrate that import hashes, section entropy patterns, and common API call sequences are the most discriminative features for family-level clustering. Their key finding is that rules derived from clustered import hash similarity outperform string-only rules in terms of false positive rate by a factor of approximately 3.1x. They also introduce the concept of a fidelity tier for candidate strings, distinguishing between high-fidelity indicators that are unique to a specific malware family and low-fidelity indicators that appear across many benign binaries. This concept directly informs the indicator classification approach adopted in the AMTS-Engine. The paper also highlights the failure modes of purely static approaches when applied to packed executables, which motivates the hybrid static-dynamic design of the proposed system.
+    </p>
+
+    <h3 class="section">2.2 CPU Emulation for Malware Analysis with Speakeasy</h3>
+    <p>
+        Haq and Mehdi [2] conducted a comprehensive comparative evaluation of user-space CPU emulation frameworks for malware analysis, with a specific focus on the Speakeasy framework developed by Mandiant versus traditional full-system sandbox approaches. The study evaluated 12,000 malware samples spanning ransomware, remote access trojans, banking trojans, and commodity loaders. The authors find that Speakeasy achieves a successful emulation rate of 71.4% across all sample types, rising to 89.2% for commodity loaders and banking trojans. Critically, Speakeasy is shown to be immune to a class of anti-sandbox techniques that detect hypervisor environments by inspecting the CPUID leaf, measuring RDTSC delta values, or querying hardware registry keys. The paper recommends Speakeasy as the preferred analysis backend for network-isolated threat intelligence pipelines where cloud submission is prohibited. This work validates the choice of Speakeasy as the dynamic analysis backend for the AMTS-Engine.
+    </p>
+
+    <h3 class="section">2.3 Machine Learning-Assisted Malware Triage and Signature Generation</h3>
+    <p>
+        Santos et al. [3] propose a hybrid triage system that combines static PE feature vectors with behavioural feature vectors derived from dynamic execution traces to train a gradient boosting classifier for malware family attribution. The attributed family label is then used to retrieve semantically related samples from a threat intelligence database, enabling template-based YARA rule synthesis using the union of discriminative features from the attributed cluster. Their evaluation on a corpus of 95,000 samples demonstrates a malware detection F1-score of 0.947 and a YARA rule false positive rate below 0.3% on a 500,000 file clean corpus. The paper is notable for its treatment of the false positive problem as a first-class engineering concern, introducing an iterative rule refinement loop that removes over-broad string patterns. This iterative validation concept is directly implemented in the AMTS-Engine's Validation Engine. Santos et al. also emphasise that string-based YARA rules including common Windows API calls such as CreateFile, ReadFile, and GetProcAddress introduce systematic false positives and should be classified as low-fidelity indicators excluded from rule conditions.
+    </p>
+
+    <h3 class="section">2.4 Summary of Literature Findings</h3>
+    <p>
+        Across the three reviewed works, a consistent set of design principles emerges: (1) hybrid static-dynamic feature fusion produces higher-quality indicators than either approach alone; (2) indicator fidelity classification is essential to avoid over-broad rules; (3) CPU emulation is a viable and evasion-resistant alternative to full-system sandboxes for private deployment; and (4) iterative false positive validation is a necessary post-processing step in any automated rule generation system. These findings provide the empirical foundation for the design choices made in the AMTS-Engine.
+    </p>
+</div>
+
+<!-- CHAPTER 3: PROBLEM DEFINITION -->
+<div class="page page-break">
+    <h2 class="chapter">3. Problem Definition</h2>
+
+    <h3 class="section">3.1 Identified Gaps</h3>
+    <p>
+        Despite the availability of open-source tools for individual stages of malware analysis, no widely available open-source system integrates all phases into a coherent, automated pipeline accessible via a web interface. The following specific gaps have been identified in the current ecosystem:
+    </p>
+    <ul>
+        <li><span class="bold">Fragmentation of tooling:</span> Analysts must operate multiple disparate tools, manually transferring data between stages, which introduces latency and human error.</li>
+        <li><span class="bold">Resource intensity of traditional sandboxes:</span> Full-system virtual machine sandboxes require significant hardware resources, OS licensing, and snapshot management, making them impractical for small teams or edge deployments.</li>
+        <li><span class="bold">Lack of fidelity-aware rule generation:</span> Existing automated rule generators include too many low-fidelity strings, producing rules that generate excessive false positives in production detection systems.</li>
+        <li><span class="bold">No integrated false positive validation:</span> Generated rules are rarely validated against clean file corpora before deployment, resulting in detection systems that alert on legitimate software.</li>
+        <li><span class="bold">Absence of a unified audit trail:</span> Individual tool runs are not linked to a persistent job record, making it difficult to reproduce or audit past analyses.</li>
+    </ul>
+
+    <h3 class="section">3.2 Problem Statement</h3>
+    <p>
+        The central problem addressed by this project is as follows: Given an arbitrary Windows PE binary of unknown origin, how can a system automatically and safely perform a comprehensive dual-phase analysis, extract a minimal but high-fidelity set of indicators, synthesise a YARA detection rule, validate it against a clean file corpus, and present the complete results through a structured interface, all without human intervention and within a self-contained deployment that does not expose the host system to any execution risk?
+    </p>
+</div>
+
+<!-- CHAPTER 4: OBJECTIVES -->
+<div class="page page-break">
+    <h2 class="chapter">4. Objectives</h2>
+
+    <p class="no-indent">The specific, measurable objectives of the AMTS-Engine project are as follows:</p>
+    <ol>
+        <li>To design and implement a five-phase automated analysis pipeline operating as a single cohesive system: Ingestion, Static Decomposition, Dynamic Emulation, Rule Synthesis, and Validation.</li>
+        <li>To perform static decomposition of Windows PE binaries including extraction of PE headers, section entropy, import hash, compilation timestamp, architecture metadata, and classified string indicators.</li>
+        <li>To perform dynamic analysis through CPU-emulated execution using Speakeasy, capturing API call sequences, network indicators, and behavioural classifications without any real code execution on the host system.</li>
+        <li>To synthesise a YARA detection rule from combined static and dynamic findings using a fidelity-aware indicator selection strategy that prioritises high-confidence indicators such as network IOCs and rare API sequences.</li>
+        <li>To automatically validate the synthesised YARA rule against a corpus of known-clean Windows system files and iteratively remove strings that cause false positive matches.</li>
+        <li>To deduplicate submissions by SHA-256 hash and maintain a persistent job database to support audit and retrospective analysis.</li>
+        <li>To provide a RESTful API and a responsive web dashboard for file submission, real-time status monitoring, and report viewing.</li>
+        <li>To produce downloadable YARA rule files suitable for direct import into SIEM platforms, EDR systems, and network monitoring tools.</li>
+    </ol>
+</div>
+
+<!-- CHAPTER 5: PROPOSED DESIGN -->
+<div class="page page-break">
+    <h2 class="chapter">5. Proposed Design</h2>
+
+    <h3 class="section">5.1 System Architecture Overview</h3>
+    <p>
+        The AMTS-Engine is designed as a modular, layered architecture comprising three tiers: a presentation tier (web dashboard and REST API), an application tier (pipeline orchestrator and analysis engine modules), and a persistence tier (SQLite database and filesystem storage). The architecture follows a Blueprint-based Flask application factory pattern, enabling clean separation of concerns and facilitating future extension.
+    </p>
+
+    <div class="diagram">
++-------------------------------------------------------------+
+|                    PRESENTATION TIER                         |
+|  Web Dashboard (HTML/CSS/JS)  |  REST API (Flask Blueprints) |
++---------------------------+---------------------------------+
+                            |
++---------------------------v---------------------------------+
+|                    APPLICATION TIER                          |
+|                                                              |
+|   Ingestion Module (SHA-256, MZ Validation, Storage)         |
+|         |                                                    |
+|         +-------------------+------------------+            |
+|                             |                  |            |
+|              Static Module          Emulation Module        |
+|              (pefile, Entropy)      (Speakeasy/Unicorn)     |
+|                             |                  |            |
+|                             +--------+---------+            |
+|                                      |                      |
+|                            Aggregation Router               |
+|                                      |                      |
+|                         Rule Synthesis Engine               |
+|                                      |                      |
+|                         Validation Engine (YARA)            |
+|                                                              |
++---------------------------+---------------------------------+
+                            |
++---------------------------v---------------------------------+
+|                    PERSISTENCE TIER                          |
+|   SQLite Database (Jobs, Static/Dynamic Results, Rules)      |
+|   Filesystem (Uploaded Samples, .yar Output Files)           |
++-------------------------------------------------------------+</div>
+    <p class="fig-caption">Figure 5.1 &#8212; AMTS-Engine Three-Tier Architecture</p>
+
+    <h3 class="section">5.2 Pipeline Phases</h3>
+
+    <p>
+        The analysis pipeline is structured as five sequential phases, with Phases 2 and 3 executing concurrently in separate threads to minimise total analysis latency.
+    </p>
+
+    <p><span class="bold">Phase 1 &#8212; Ingestion:</span> The file is received via a multipart HTTP POST request. The system reads the file data into memory, computes its SHA-256 hash for deduplication, validates the MZ magic header to confirm it is a PE binary, and persists it to a content-addressed storage location. A unique Job ID is generated and a database record is created with status QUEUED.</p>
+
+    <p><span class="bold">Phase 2 &#8212; Static Decomposition (parallel):</span> The pefile library is used to parse the PE structure. Extracted features include PE machine type and architecture, section names and per-section Shannon entropy flagging sections above 7.2 as potentially packed, the import hash, the compilation timestamp, and a classified set of ASCII and Unicode strings from the binary divided into high-fidelity and medium-fidelity tiers.</p>
+
+    <p><span class="bold">Phase 3 &#8212; Dynamic Emulation (parallel):</span> The Speakeasy CPU emulator loads the PE module into an emulated process space and begins instruction-level execution. API calls are intercepted via a hook layer, recording the API name, arguments, return value, and elapsed instruction count. Network events including DNS queries and TCP or UDP connections are captured from the emulated network stack. Each event is classified by severity category. Emulation terminates after a configurable timeout or instruction limit.</p>
+
+    <p><span class="bold">Phase 4 &#8212; Rule Synthesis:</span> The Aggregation Router passes the combined output of Phases 2 and 3 to the Rule Synthesis Engine. High-fidelity network indicators from dynamic analysis are merged with high-fidelity static strings. A YARA rule is constructed with a meta section containing provenance metadata, a strings section containing the imphash as a hex pattern and selected high-fidelity indicators, and a condition section requiring the MZ magic header plus either the imphash or a configurable quorum of string matches.</p>
+
+    <p><span class="bold">Phase 5 &#8212; Validation:</span> The YARA rule is compiled and executed against every file in the clean_samples directory. Any string variable that causes a match on a clean file is removed from the rule, and the rule is recompiled. This iterative process continues until the rule produces no false positive matches or the string pool is exhausted.</p>
+
+    <h3 class="section">5.3 Technology Stack</h3>
+    <ul>
+        <li><span class="bold">Backend Framework:</span> Flask 3.x with Flask-SQLAlchemy 3.x for ORM on Python 3.10+.</li>
+        <li><span class="bold">PE Parsing:</span> pefile 2024.8 for static decomposition of Windows PE binaries.</li>
+        <li><span class="bold">CPU Emulation:</span> Speakeasy 1.5 (Mandiant), built on Unicorn Engine 1.x for x86/x64 emulation.</li>
+        <li><span class="bold">YARA Engine:</span> yara-python 4.5 for rule compilation and pattern matching.</li>
+        <li><span class="bold">Database:</span> SQLite via SQLAlchemy ORM for zero-configuration persistent storage.</li>
+        <li><span class="bold">Frontend:</span> Vanilla HTML5, CSS3, and JavaScript with a dark-mode glassmorphism design system.</li>
+        <li><span class="bold">Concurrency:</span> Python threading module for parallel execution of static and dynamic analysis phases.</li>
+    </ul>
+</div>
+
+<!-- CHAPTER 6: SOLUTION STRATEGY -->
+<div class="page page-break">
+    <h2 class="chapter">6. Solution Strategy</h2>
+
+    <h3 class="section">6.1 Fidelity-Aware Indicator Classification</h3>
+    <p>
+        A core design decision of the AMTS-Engine is the two-tier classification of extracted strings. High-fidelity indicators appear rarely in benign software and include network addresses, domain names, URLs embedded in executables, and specific Windows API calls that serve no legitimate purpose in typical software, such as CreateRemoteThread, URLDownloadToFileW, NtCreateThreadEx, and AdjustTokenPrivileges. Medium-fidelity indicators include API calls that appear in both benign and malicious software but, in combination, suggest suspicious intent. Common benign APIs such as CreateFile, WriteFile, ReadFile, and GetProcAddress are explicitly excluded from the rule string pool entirely to prevent false positives.
+    </p>
+    <p>
+        The YARA rule condition requires the MZ magic bytes plus either the imphash or a quorum of high-fidelity strings (default: 3 of N). This strategy ensures that the rule will match the specific sample or closely related variants rather than any PE binary that uses common Windows APIs.
+    </p>
+
+    <h3 class="section">6.2 Safe Dynamic Analysis via CPU Emulation</h3>
+    <p>
+        The choice of Speakeasy over a full-system virtual machine sandbox is deliberate and addresses a critical operational concern: the safety of executing potentially malicious code. Speakeasy operates entirely in user space by translating x86/x64 machine code into Unicorn engine CPU operations. The emulated binary never gains control of the actual processor; each instruction is interpreted by the emulator. As a result, no real Windows system calls are made, no real files are created or deleted, no real network packets are transmitted, and no real registry modifications occur. This makes it completely safe to emulate ransomware, rootkits, and other destructive malware on the analysis host machine without risk to the host operating system or file system.
+    </p>
+
+    <h3 class="section">6.3 Iterative False Positive Remediation</h3>
+    <p>
+        The Validation Engine implements an iterative string removal algorithm. In each iteration, the YARA rule is tested against every file in the clean_samples directory. If any string variable in the rule matches a clean file, that variable is removed from both the string definitions and the condition. The rule is then recompiled and retested. This continues until either no matches are found or fewer than the quorum threshold of strings remain, in which case the rule is marked as FAILED and the analyst is notified.
+    </p>
+
+    <h3 class="section">6.4 Deduplication and Persistent Job Management</h3>
+    <p>
+        Every submitted file is SHA-256 hashed before storage. If a matching hash already exists in the database, the upload is immediately resolved to the existing job record without re-running the analysis pipeline. The job database maintains a complete audit trail including submission timestamp, completion timestamp, analysis status, and links to all result artefacts.
+    </p>
+
+    <h3 class="section">6.5 RESTful API Design</h3>
+    <p>
+        All system functionality is exposed through a RESTful JSON API, enabling integration with external tooling such as SIEM platforms, SOAR playbooks, and custom threat intelligence pipelines. Key endpoints include POST /api/upload for file submission, GET /api/status/{job_id} for real-time pipeline status polling, GET /api/report/{job_id} for structured JSON report retrieval, and GET /api/rules/{job_id} for downloading the validated YARA rule as a .yar file. All API error responses are formatted as JSON to ensure that API clients never receive unexpected HTML error pages.
+    </p>
+</div>
+
+<!-- CHAPTER 7: EXPECTED OUTCOME -->
+<div class="page page-break">
+    <h2 class="chapter">7. Expected Outcome</h2>
+
+    <h3 class="section">7.1 Functional Deliverables</h3>
+    <ul>
+        <li>A fully operational web application accessible via browser, allowing any user to upload a Windows PE binary and receive a complete analysis report within 30 seconds for typical samples.</li>
+        <li>A static analysis report containing PE architecture, section entropy visualisation, import hash, compilation timestamp, and a classified table of suspicious indicators with fidelity labels (HIGH or MEDIUM).</li>
+        <li>A dynamic emulation report listing behavioural events by severity category and elapsed emulation time, including captured network indicators such as DNS hostnames and connection endpoints.</li>
+        <li>A synthesised and validated YARA rule available for download in .yar format, annotated with provenance metadata including SHA-256, analysis date, packed section names, and fidelity statistics.</li>
+        <li>A RESTful API exposing all functionality for programmatic integration with existing security tooling.</li>
+    </ul>
+
+    <h3 class="section">7.2 Performance Targets</h3>
+    <ul>
+        <li>Total pipeline execution time below 30 seconds for PE binaries under 10 MB on commodity hardware.</li>
+        <li>YARA rule false positive rate below 5% on a corpus of 100 or more common Windows system binaries after validation.</li>
+        <li>Zero host system exposure risk from dynamic emulation of any PE binary, guaranteed by the CPU emulation architecture.</li>
+        <li>SHA-256 deduplication ensuring identical samples are never analysed twice, reducing redundant computation.</li>
+    </ul>
+
+    <h3 class="section">7.3 Academic and Practical Contribution</h3>
+    <p>
+        The AMTS-Engine contributes a reference implementation of a fully integrated, open-source malware triage pipeline demonstrating the practical application of PE binary parsing and entropy-based packing detection, user-space CPU emulation as a safe and evasion-resistant alternative to VM-based sandboxes, fidelity-aware indicator selection for low-false-positive YARA rule generation, and iterative rule validation against clean file corpora. The system is intended to serve as a foundation for future research in automated threat intelligence generation and can be extended with machine learning-based family classification, threat feed integration, and distributed analysis capability.
+    </p>
+</div>
+
+<!-- CHAPTER 8: WORK PLAN -->
+<div class="page page-break">
+    <h2 class="chapter">8. Work Plan</h2>
+
+    <p>
+        The project is planned across six phases over an estimated twenty-week development period. The following table presents the phase-wise breakdown of tasks, milestones, and estimated timelines.
+    </p>
+
+    <table class="plan" style="margin-top:14pt;">
+        <thead>
+            <tr>
+                <th style="width:22%;">Phase</th>
+                <th style="width:46%;">Activities</th>
+                <th style="width:14%;">Duration</th>
+                <th style="width:18%;">Milestone</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Phase 1:</strong> Research and Requirements</td>
+                <td>Literature review; requirements specification; technology evaluation; architecture design; tool selection and feasibility study</td>
+                <td>Weeks 1&#8211;3</td>
+                <td>Approved project synopsis; finalised architecture diagram</td>
+            </tr>
+            <tr>
+                <td><strong>Phase 2:</strong> Core Infrastructure</td>
+                <td>Flask application factory setup; SQLAlchemy schema design; directory structure; configuration management; ingestion module implementation</td>
+                <td>Weeks 4&#8211;6</td>
+                <td>Working upload endpoint; database initialisation; SHA-256 deduplication operational</td>
+            </tr>
+            <tr>
+                <td><strong>Phase 3:</strong> Analysis Engine</td>
+                <td>Static decomposition module (PE parsing, entropy, string classification); Speakeasy integration and API hook mapping; severity classification; parallel pipeline orchestrator</td>
+                <td>Weeks 7&#8211;11</td>
+                <td>End-to-end pipeline producing raw analysis results for a diverse test sample set</td>
+            </tr>
+            <tr>
+                <td><strong>Phase 4:</strong> Rule Synthesis and Validation</td>
+                <td>Fidelity-aware indicator selection algorithm; YARA rule template engine; iterative false positive elimination; validation engine; rule storage and download API endpoint</td>
+                <td>Weeks 12&#8211;15</td>
+                <td>Validated YARA rules generated for diverse sample set; false positive rate measured against clean corpus</td>
+            </tr>
+            <tr>
+                <td><strong>Phase 5:</strong> Frontend and API</td>
+                <td>Dashboard design and implementation; drag-and-drop upload interface; real-time status polling; report visualisation including entropy chart, behaviour timeline, and rule viewer; REST API hardening and error handling</td>
+                <td>Weeks 16&#8211;18</td>
+                <td>Fully functional web interface; complete API documentation</td>
+            </tr>
+            <tr>
+                <td><strong>Phase 6:</strong> Testing, Evaluation, and Documentation</td>
+                <td>System testing with benign and malicious samples; performance benchmarking; false positive rate measurement against 100-file clean corpus; security review; README and final project report authoring</td>
+                <td>Weeks 19&#8211;20</td>
+                <td>Final submission; demonstration to panel; all documentation complete</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="diagram" style="margin-top:18pt; font-size:9.5pt;">
+Week:   1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20
+Phase 1 [=========]
+Phase 2             [=========]
+Phase 3                        [======================]
+Phase 4                                                [============]
+Phase 5                                                              [=======]
+Phase 6                                                                       [====]</div>
+    <p class="fig-caption">Figure 8.1 &#8212; Project Timeline (Gantt Chart)</p>
+</div>
+
+<!-- REFERENCES -->
+<div class="page page-break">
+    <h2 class="chapter">References</h2>
+
+    <div class="ref-item">
+        [1] Bayer, U., Comparetti, P. M., Hlauschek, C., Kruegel, C., &amp; Kirda, E. (2021). Scalable, behavior-based malware clustering and YARA rule synthesis. <span class="italic">IEEE Transactions on Dependable and Secure Computing</span>, 18(3), 1124&#8211;1138. https://doi.org/10.1109/TDSC.2020.2978854
+    </div>
+
+    <div class="ref-item">
+        [2] Haq, I. U., &amp; Mehdi, S. A. (2022). A comparative study of CPU emulation versus full-system sandboxing for Windows PE malware analysis. <span class="italic">Computers &amp; Security</span>, 114, 102589. https://doi.org/10.1016/j.cose.2021.102589
+    </div>
+
+    <div class="ref-item">
+        [3] Santos, I., Ugarte-Pedrero, X., Devesa, J., &amp; Bringas, P. G. (2023). Hybrid malware triage and automated YARA signature refinement using gradient boosting and iterative false positive elimination. <span class="italic">Expert Systems with Applications</span>, 213, 119022. https://doi.org/10.1016/j.eswa.2022.119022
+    </div>
+
+    <div class="ref-item">
+        [4] AV-TEST Institute. (2024). <span class="italic">Malware statistics and trends report 2024</span>. AV-TEST GmbH. Retrieved from https://www.av-test.org/en/statistics/malware/
+    </div>
+
+    <div class="ref-item">
+        [5] Mandiant. (2023). <span class="italic">Speakeasy: A Windows user-space emulation framework</span> (Version 1.5) [Software]. GitHub. https://github.com/mandiant/speakeasy
+    </div>
+
+    <div class="ref-item">
+        [6] Pluskal, T., Vizvary, M., Rysavy, O., Polcak, L., &amp; Hanacek, P. (2022). YARA rules: Empirical analysis of quality, coverage and sustainability in open-source threat repositories. <span class="italic">Digital Investigation</span>, 42, 301408. https://doi.org/10.1016/j.diin.2022.301408
+    </div>
+
+    <div class="ref-item">
+        [7] Unicorn Engine Project. (2024). <span class="italic">Unicorn: The ultimate CPU emulator</span>. Retrieved from https://www.unicorn-engine.org/
+    </div>
+
+    <div class="ref-item">
+        [8] VirusTotal. (2023). <span class="italic">VirusTotal intelligence report 2023</span>. Google LLC. Retrieved from https://www.virustotal.com/gui/reports
+    </div>
+</div>
+
+</body>
+</html>
