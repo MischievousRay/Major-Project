@@ -1,7 +1,15 @@
 document.addEventListener("DOMContentLoaded", function () {
     initDropzone();
     initStatusPolling();
+    initEntropyBars();
 });
+
+function initEntropyBars() {
+    var bars = document.querySelectorAll(".entropy-bar[data-width]");
+    bars.forEach(function (bar) {
+        bar.style.width = bar.getAttribute("data-width") + "%";
+    });
+}
 
 function initDropzone() {
     var dropzone = document.getElementById("dropzone");

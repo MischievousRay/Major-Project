@@ -2,11 +2,11 @@ rule AMTS_db06c3534964e3fc
 {
     meta:
         author = "AMTS-Engine"
-        date = "2026-08-27T09:40:06Z"
+        date = "2026-11-26T21:55:02Z"
         sha256 = "db06c3534964e3fc79d2763144ba53742d7fa250ca336f4a0fe724b75aaff386"
         description = "Auto-generated YARA rule for sample db06c3534964e3fc"
         packed_sections = "none"
-        emulation_performed = "false"
+        emulation_performed = "true"
         high_fidelity_indicators = "3"
         medium_fidelity_indicators = "10"
 
