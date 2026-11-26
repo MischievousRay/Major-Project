@@ -123,10 +123,15 @@ function showResult(type, message) {
 }
 
 function initStatusPolling() {
-    var rows = document.querySelectorAll("tr[data-status='QUEUED'], tr[data-status='EXECUTING']");
-    if (rows.length === 0) return;
+    // Re-query rows every tick so we always have the live set
+    var intervalId = setInterval(function () {
+        var rows = document.querySelectorAll("tr[data-status='QUEUED'], tr[data-status='EXECUTING']");
+        if (rows.length === 0) {
+            // Nothing left to poll
+            clearInterval(intervalId);
+            return;
+        }
 
-    setInterval(function () {
         rows.forEach(function (row) {
             var jobId = row.getAttribute("data-job-id");
             var currentStatus = row.getAttribute("data-status");
@@ -134,7 +139,10 @@ function initStatusPolling() {
             if (currentStatus === "COMPLETED" || currentStatus === "FAILED") return;
 
             fetch("/api/status/" + jobId)
-                .then(function (resp) { return resp.json(); })
+                .then(function (resp) {
+                    if (!resp.ok) throw new Error("HTTP " + resp.status);
+                    return resp.json();
+                })
                 .then(function (data) {
                     if (data.status !== currentStatus) {
                         row.setAttribute("data-status", data.status);
@@ -151,7 +159,9 @@ function initStatusPolling() {
                         }
                     }
                 })
-                .catch(function () {});
+                .catch(function (err) {
+                    console.warn("Status poll error for job " + jobId + ":", err);
+                });
         });
     }, 3000);
 }

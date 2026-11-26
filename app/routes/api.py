@@ -131,3 +131,27 @@ def list_jobs():
         }
         for j in jobs
     ]), 200
+
+
+@api_bp.route("/jobs/stats", methods=["GET"])
+def jobs_stats():
+    """Return aggregate statistics for the dashboard."""
+    from app.models import DynamicResult, YaraRule
+    total = Job.query.count()
+    completed = Job.query.filter_by(status="COMPLETED").count()
+    failed = Job.query.filter_by(status="FAILED").count()
+    in_progress = Job.query.filter(Job.status.in_(["QUEUED", "EXECUTING"])).count()
+    emulation_success = db.session.query(DynamicResult).filter_by(emulation_success=True).count()
+    total_fp = db.session.query(
+        db.func.sum(YaraRule.false_positive_count)
+    ).scalar() or 0
+    rules_passed = db.session.query(YaraRule).filter_by(validation_status="PASSED").count()
+    return jsonify({
+        "total_jobs": total,
+        "completed": completed,
+        "failed": failed,
+        "in_progress": in_progress,
+        "emulation_success_count": emulation_success,
+        "total_false_positives_remediated": int(total_fp),
+        "rules_passed_validation": rules_passed,
+    }), 200

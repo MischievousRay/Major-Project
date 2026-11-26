@@ -93,6 +93,7 @@ def run_pipeline(job_id, file_path, app):
         final_rule, val_status, fp_count = validation.validate(rule_text, clean_dir)
 
         rules_dir = app.config.get("RULES_OUTPUT_DIR", "rules")
+        os.makedirs(rules_dir, exist_ok=True)
         rule_file_path = os.path.join(rules_dir, f"{rule_name}.yar")
         with open(rule_file_path, "w", encoding="utf-8") as f:
             f.write(final_rule)

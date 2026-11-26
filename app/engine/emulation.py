@@ -131,6 +131,13 @@ def parse_speakeasy_report(report):
 
 
 def emulate(file_path, timeout=20, max_instructions=1_000_000):
+    """
+    Emulate a PE file using Speakeasy CPU emulator.
+
+    Note: Speakeasy's run_module() does not accept a timeout kwarg; timeout
+    enforcement is handled by running the emulation in a thread and joining
+    with the wall-clock timeout.
+    """
     if not SPEAKEASY_AVAILABLE:
         return {
             "behaviors": [],
@@ -138,21 +145,45 @@ def emulate(file_path, timeout=20, max_instructions=1_000_000):
             "error_message": "speakeasy-emulator is not installed. Install it with: pip install speakeasy-emulator",
         }
 
-    try:
-        emu = se.Speakeasy()
-        module = emu.load_module(file_path)
-        emu.run_module(module, timeout=timeout)
-        report = emu.get_report()
-        behaviors = parse_speakeasy_report(report)
+    result_holder = {}
+    error_holder = {}
 
-        return {
-            "behaviors": behaviors,
-            "emulation_success": True,
-            "error_message": None,
-        }
-    except Exception as e:
+    def _run():
+        try:
+            emu = se.Speakeasy()
+            module = emu.load_module(file_path)
+            emu.run_module(module)
+            report = emu.get_report()
+            result_holder["report"] = report
+        except Exception as exc:
+            error_holder["error"] = str(exc)
+            error_holder["traceback"] = traceback.format_exc()
+
+    import threading
+    t = threading.Thread(target=_run, daemon=True)
+    t.start()
+    t.join(timeout=timeout)
+
+    if t.is_alive():
+        # Thread still running after timeout — return a partial success note
         return {
             "behaviors": [],
             "emulation_success": False,
-            "error_message": f"Emulation failed: {str(e)}",
+            "error_message": f"Emulation timed out after {timeout}s",
         }
+
+    if "error" in error_holder:
+        return {
+            "behaviors": [],
+            "emulation_success": False,
+            "error_message": f"Emulation failed: {error_holder['error']}",
+        }
+
+    report = result_holder.get("report", {})
+    behaviors = parse_speakeasy_report(report)
+
+    return {
+        "behaviors": behaviors,
+        "emulation_success": True,
+        "error_message": None,
+    }
