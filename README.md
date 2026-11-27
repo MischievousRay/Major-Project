@@ -14,54 +14,183 @@ threat report dashboard.
 
 ## Architecture
 
-The engine is structured as a five-phase pipeline:
+AMTS-Engine is organized into **four decoupled layers** — Presentation/Web UI, REST API & Routing, Asynchronous Analysis Engine, and Persistence/Artifact Storage — executing a five-phase automated malware triage pipeline.
 
+### High-Level Component Architecture
+
+```mermaid
+flowchart TB
+    subgraph Client["Presentation Layer (Browser)"]
+        UI["Dashboard & Report UI<br/>(index.html, report.html, style.css)"]
+        JS["Client Controller (app.js)<br/>XHR Upload, 3s Status Polling, Entropy Bars"]
+    end
+
+    subgraph Flask["Web & API Layer (Flask App Factory)"]
+        DashBP["dashboard_bp<br/>GET / , GET /report/<job_id>"]
+        ApiBP["api_bp (/api)<br/>POST /upload, GET /status, /report, /rules, /jobs, /jobs/stats"]
+    end
+
+    subgraph Orchestrator["Pipeline Orchestrator (pipeline.py)"]
+        Worker["Background Thread<br/>run_pipeline(job_id, file_path, app)"]
+        Pool["ThreadPoolExecutor (max_workers=2)"]
+    end
+
+    subgraph Engine["Analysis & Synthesis Engine (app/engine/)"]
+        Ingest["1. Ingestion (ingestion.py)<br/>SHA-256, MZ Header Check (0x4D5A), Dedup"]
+        Static["2. Static Decomposition (static_analysis.py)<br/>pefile, ImpHash, Shannon Entropy, ASCII/UTF-16LE Strings"]
+        Dynamic["3. Dynamic Emulation (emulation.py)<br/>Speakeasy / Unicorn CPU Emulation + Thread Timeout"]
+        Synth["4. Rule Synthesis (rule_synthesis.py)<br/>Indicator Selection, Behavior Correlation, YARA Gen"]
+        Valid["5. Validation Engine (validation.py)<br/>yara-python Compile, Clean-Corpus Scan, Iterative FP Removal"]
+    end
+
+    subgraph Storage["Persistence & Artifacts"]
+        DB[("SQLite (amts_engine.db)<br/>jobs, static_results, dynamic_results, yara_rules")]
+        Uploads[("uploads/<br/>Raw PE Binaries by SHA-256")]
+        Clean[("clean_samples/<br/>Known-Clean PE Corpus")]
+        Rules[("rules/<br/>Validated .yar Signatures")]
+    end
+
+    UI <--> JS
+    JS -->|HTTP / JSON| ApiBP
+    UI -->|Jinja2 SSR| DashBP
+    ApiBP --> Ingest
+    Ingest -->|Valid PE| Uploads
+    Ingest -->|New Job| Worker
+    Worker --> Pool
+    Pool --> Static
+    Pool --> Dynamic
+    Static --> Synth
+    Dynamic --> Synth
+    Synth --> Valid
+    Clean -->|FP Scan| Valid
+    Valid --> Rules
+    Worker -->|Persist Results| DB
+    DashBP -->|Query| DB
+    ApiBP -->|Query| DB
 ```
-                                +-------------------+
-                                |   Web Dashboard   |
-                                |  (Upload / View)  |
-                                +--------+----------+
-                                         |
-                                         v
-                                +-------------------+
-                                |   Ingestion API   |
-                                | SHA-256, MZ Check |
-                                +--------+----------+
-                                         |
-                         +---------------+----------------+
-                         |                                |
-                         v                                v
-              +---------------------+         +---------------------+
-              | Static Decomposition|         | OS Emulation        |
-              | (PE Headers, Entropy|         | (speakeasy-emulator)|
-              |  Strings, ImpHash)  |         | (API Hooking, Behav)|
-              +----------+----------+         +----------+----------+
-                         |                                |
-                         +---------------+----------------+
-                                         |
-                                         v
-                                +-------------------+
-                                | Aggregation Router|
-                                +--------+----------+
-                                         |
-                                         v
-                                +-------------------+
-                                | Rule Synthesis    |
-                                | (YARA Generation) |
-                                +--------+----------+
-                                         |
-                                         v
-                                +-------------------+
-                                | Validation Engine |
-                                | (FP Elimination)  |
-                                +--------+----------+
-                                         |
-                                         v
-                                +-------------------+
-                                | SQLite Database   |
-                                | + Rule File (.yar)|
-                                +-------------------+
+
+### End-to-End Request & Pipeline Sequence
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant UI as Browser (app.js)
+    participant API as Flask API (/api/upload)
+    participant DB as SQLite (SQLAlchemy)
+    participant Thread as Background Thread (run_pipeline)
+    participant Pool as ThreadPoolExecutor
+    participant YARA as Synthesis & Validation
+
+    User->>UI: Drop / Select PE file
+    UI->>API: POST /api/upload (multipart/form-data)
+    API->>API: Compute SHA-256
+    API->>DB: Query Job by sha256
+    alt Duplicate SHA-256 found
+        DB-->>API: Existing Job
+        API-->>UI: 200 OK (duplicate: true, job_id)
+    else New sample
+        API->>API: Validate MZ header (0x4D 0x5A)
+        API->>DB: Insert Job (status = QUEUED)
+        API->>Thread: Spawn daemon thread
+        API-->>UI: 202 Accepted (job_id)
+        loop Every 3s while QUEUED or EXECUTING
+            UI->>API: GET /api/status/<job_id>
+            API-->>UI: { status }
+        end
+        Thread->>DB: Update Job (status = EXECUTING)
+        par Parallel Analysis
+            Thread->>Pool: static_analysis.analyze(file_path)
+        and
+            Thread->>Pool: emulation.emulate(file_path, timeout=20)
+        end
+        Pool-->>Thread: static_result + dynamic_result
+        Thread->>YARA: rule_synthesis.synthesize(...)
+        YARA->>YARA: validation.validate(rule_text, clean_samples/)
+        YARA-->>Thread: final_rule, validation_status, fp_count
+        Thread->>DB: Save StaticResult, DynamicResult, YaraRule + status = COMPLETED
+        UI->>API: Redirect / View /report/<job_id>
+    end
 ```
+
+### Architectural Layers & Responsibilities
+
+1. **Application Factory & Configuration (`app/__init__.py`, `config.py`)**
+   - `create_app()` initializes Flask, binds SQLAlchemy, ensures `uploads/`, `clean_samples/`, and `rules/` exist, registers `api_bp` (`/api`) and `dashboard_bp` (`/`), and runs `db.create_all()` on startup.
+   - Global HTTP error handlers (`400`, `413`, `500`) return structured JSON for `/api/*` routes.
+
+2. **Web & REST API Layer (`app/routes/`)**
+   - **`dashboard_bp` (`dashboard.py`)**: Server-renders `index.html` (recent 20 jobs) and `report.html` (full triage report for a `job_id`).
+   - **`api_bp` (`api.py`)**: Exposes JSON endpoints for upload, polling, full report retrieval, `.yar` download, job listing, and aggregate statistics (`/api/jobs/stats`).
+
+3. **Concurrency & Execution Model (`app/engine/pipeline.py`, `emulation.py`)**
+   - **Non-blocking ingestion**: `/api/upload` spawns a Python `threading.Thread(daemon=True)` running `run_pipeline()` inside `app.app_context()` so HTTP uploads return `202 Accepted` immediately.
+   - **Parallel static + dynamic stage**: `run_pipeline()` uses a `ThreadPoolExecutor(max_workers=2)` to run `static_analysis.analyze()` and `emulation.emulate()` concurrently.
+   - **Thread-enforced emulation timeout**: Because `speakeasy.Speakeasy.run_module()` does not accept a `timeout` keyword argument, `emulation.emulate()` executes Speakeasy inside a child daemon thread and enforces `EMULATION_TIMEOUT_SECONDS` via `thread.join(timeout=timeout)`.
+
+4. **Client-Side Interactivity (`app/static/js/app.js`)**
+   - Drag-and-drop / file-picker upload via `XMLHttpRequest` with upload progress tracking.
+   - Live status polling (`initStatusPolling()`) re-queries `QUEUED`/`EXECUTING` table rows every 3 seconds and stops automatically once no pending jobs remain.
+   - Section entropy bar widths are applied on `DOMContentLoaded` from `data-width` attributes (`initEntropyBars()`).
+
+### Low-Level Architecture (Module Internals & Data Contracts)
+
+#### 1. Ingestion Module (`app/engine/ingestion.py`)
+- `compute_sha256(file_data) -> str`: Computes lowercase 64-char SHA-256 hex digest over raw buffered bytes.
+- `validate_mz_header(file_data) -> bool`: Checks `len(file_data) >= 2 and file_data[0:2] == b"\x4d\x5a"`. Rejects non-PE uploads with HTTP `422`.
+- `generate_job_id(length=12) -> str`: Samples 12 chars from `[A-Za-z0-9]`; `api.py` loops on `db.session.get(Job, job_id)` to guarantee primary-key uniqueness.
+- `save_sample(file_data, sha256, upload_folder) -> str`: Persists raw binary to `uploads/<sha256>`.
+
+#### 2. Static Decomposition (`app/engine/static_analysis.py`)
+- `analyze(file_path, entropy_threshold=7.2) -> dict`:
+  - Opens binary via `pefile.PE(file_path)` (returns `{"error": "Invalid PE file format", ...}` on `PEFormatError`).
+  - Extracts COFF `TimeDateStamp` (UTC ISO-8601, falling back to `raw:<int>`), `Machine` mapped via `ARCH_MAP` (`0x14c` x86, `0x8664` x86-64, `0x1c0` ARM, `0xaa64` ARM64, `0x200` IA-64), `NumberOfSections`, and `pe.get_imphash()`.
+  - **`calculate_shannon_entropy(data)`**: Builds a 256-bin byte frequency histogram and computes $-\sum p_i \log_2(p_i)$ rounded to 4 decimal places; sections with `entropy >= entropy_threshold` (`7.2`) get `is_packed: true`.
+  - **String extraction**: `extract_ascii_strings(raw_data, min_length=6)` (`[\x20-\x7e]{6,}`) and `extract_unicode_strings(raw_data, min_length=6)` (`(?:[\x20-\x7e]\x00){6,}` decoded as `utf-16-le`).
+  - **`filter_suspicious_strings(strings)`**: Deduplicates and discards `GENERIC_NOISE` / strings `< 4` chars, then classifies into `{value, type, fidelity}`:
+    - `HIGH_FIDELITY_APIS` → `type: "suspicious_api", fidelity: "high"`
+    - `MEDIUM_FIDELITY_APIS` → `type: "suspicious_api", fidelity: "medium"`
+    - `URL_PATTERN` (`https?://[^\s"'<>]{8,}`) → `type: "url", fidelity: "high"`
+    - `IP_STANDALONE` (IPv4 regex) → `type: "ip_address", fidelity: "high"`
+    - `DOMAIN_STANDALONE` (FQDN + common TLDs) → `type: "domain", fidelity: "high"`
+
+#### 3. Dynamic Emulation (`app/engine/emulation.py`)
+- `emulate(file_path, timeout=20, max_instructions=1_000_000) -> dict`:
+  - Instantiates `se.Speakeasy()`, calls `emu.load_module(file_path)`, `emu.run_module(module)`, and `emu.get_report()` inside a child daemon `threading.Thread` joined with `t.join(timeout=timeout)`.
+  - Returns `{"behaviors": [...], "emulation_success": bool, "error_message": str | None}`.
+- `parse_speakeasy_report(report) -> list[dict]`:
+  - Iterates `report["entry_points"][*]["apis"]`, mapping `args` to `arg_0..arg_N` + `return_value`, and classifying `api_name` via `SEVERITY_MAP` (`Code Injection`, `Process Creation`, `Network Beaconing`, `Registry Modification`, `File Manipulation`, `Memory Allocation`, `Memory Modification`, `Dynamic Resolution`, `Cryptographic Activity`, `Anti-Analysis`, `Privilege Escalation`, `Input Capture`, or default `General API Call`).
+  - Appends `report["network_events"]["dns"]` as `dns.resolve` and `report["network_events"]["traffic"]` as `network.connection` (both `Network Beaconing`).
+
+#### 4. Rule Synthesis (`app/engine/rule_synthesis.py`)
+- `extract_behavior_indicators(behaviors)`: Filters `behaviors` to high-severity categories (`Code Injection`, `Network Beaconing`, `Privilege Escalation`, `Input Capture`, `Process Hollowing`) and extracts `hostname`, `server`, `url` values (`len > 4`) as `type: "behavior_indicator", fidelity: "high"`.
+- `select_rule_strings(suspicious_strings)`: Takes all `high` fidelity / network / behavior entries first; if `< 5`, backfills with `medium` fidelity entries up to 5.
+- `synthesize(sha256, static_result, dynamic_result, match_threshold=3)`:
+  - Rule name: `AMTS_<sha256[:16]>`.
+  - Escapes `\` and `"` and strips control chars (`[\x00-\x1f\x7f-\x9f]`) via `clean_string_for_yara()`.
+  - Emits `$imphash = { <hex bytes> }` (when available) and `$s0..$sN` strings; falls back to `$mz_marker = { 4D 5A }` if no indicators exist.
+  - Condition builder always anchors on `uint16(0) == 0x5A4D` plus:
+    - `($imphash or <effective_threshold> of ($s*))` when both `imphash` and `$s*` exist,
+    - `$imphash` when only `imphash` exists,
+    - `<effective_threshold> of ($s*)` when only `$s*` exists,
+    - `$mz_marker` as fallback, where `effective_threshold = min(match_threshold, len(string_only_names))`.
+
+#### 5. Validation & FP Remediation (`app/engine/validation.py`)
+- `validate(rule_text, clean_dir, max_iterations=10) -> (final_rule, status, total_false_positives)`:
+  - Returns `SKIPPED` if `yara-python` is unavailable, or `PASSED_NO_SAMPLES` if `clean_dir` has no files besides `README.md`.
+  - Iterative loop (up to `max_iterations` = 10):
+    1. `compile_rule(current_rule)` via `yara.compile(source=...)` (returns `COMPILATION_ERROR` on failure).
+    2. `scan_clean_directory(compiled, clean_dir)` walks `clean_dir` with `compiled.match(filepath, timeout=10)`, collecting unique matched string identifiers (`$s*`).
+    3. If `fp_matches` is empty → returns `(current_rule, "PASSED", total_false_positives)`.
+    4. Otherwise increments `total_false_positives += len(fp_matches)` and calls `remove_offending_strings(current_rule, offending)`, which deletes matching `$sN = ...` lines and decrements `N of ($s*)` to `max(1, old_threshold - removed_count)`.
+    5. If matches persist after 10 rounds → returns `(current_rule, "PARTIAL", total_false_positives)`.
+
+#### 6. Pipeline Orchestration & Persistence (`app/engine/pipeline.py`, `app/models.py`)
+- `run_pipeline(job_id, file_path, app)` runs inside `app.app_context()`:
+  1. Transitions `Job.status` to `EXECUTING` and commits.
+  2. Executes `static_analysis.analyze` and `emulation.emulate` in `ThreadPoolExecutor(max_workers=2)` via `as_completed()`.
+  3. Persists `StaticResult` (`sections_json`, `suspicious_strings_json`) and `DynamicResult` (`behaviors_json`, `emulation_success`, `error_message`).
+  4. Calls `rule_synthesis.synthesize()` → `validation.validate()` → writes `rules/<rule_name>.yar` (`os.makedirs(rules_dir, exist_ok=True)`).
+  5. Persists `YaraRule`, sets `Job.status = "COMPLETED"` and `Job.completed_at = datetime.now(timezone.utc)`, and commits.
 
 ## System Requirements
 
@@ -285,6 +414,14 @@ GET /api/jobs
 
 Returns an array of the 50 most recent jobs.
 
+#### Get Aggregate Job Statistics
+
+```
+GET /api/jobs/stats
+```
+
+Returns aggregate counts across all jobs in the database (`total_jobs`, `completed`, `failed`, `in_progress`, `emulation_success_count`, `total_false_positives_remediated`, `rules_passed_validation`).
+
 ## Pipeline Phase Details
 
 ### Phase 1: Ingestion
@@ -438,23 +575,64 @@ Major Project/
                 app.js          Client-side upload and polling logic
     clean_samples/
         README.md               Setup instructions for clean validation files
+    tests/
+        __init__.py
+        test_full_pipeline.py   37-test integration suite (emulation, static, YARA, DB, API)
     uploads/                    Stored sample binaries (by SHA-256 hash)
     rules/                      Generated YARA rule files (.yar)
+    verify_system.py            Recursive end-to-end system verification script
 ```
 
 ## Database Schema
 
-The application uses SQLite with four tables:
+The application uses SQLite via SQLAlchemy with four 1-to-1 linked tables (`Job` cascades deletes to its child records):
 
-- **jobs**: Core job tracking with id, filename, sha256, status, file_path,
-  created_at, and completed_at fields.
-- **static_results**: Static analysis output linked to a job. Stores imphash,
-  compilation timestamp, architecture, section count, and JSON-encoded section
-  details and suspicious strings.
-- **dynamic_results**: Dynamic analysis output linked to a job. Stores
-  JSON-encoded behavior log, emulation success flag, and error messages.
-- **yara_rules**: Generated YARA rules linked to a job. Stores rule name, full
-  rule text, validation status, and false positive count.
+```mermaid
+erDiagram
+    JOBS ||--o| STATIC_RESULTS : "has one"
+    JOBS ||--o| DYNAMIC_RESULTS : "has one"
+    JOBS ||--o| YARA_RULES : "has one"
+
+    JOBS {
+        string id PK "12-char alphanumeric"
+        string filename
+        string sha256 "indexed, 64 hex chars"
+        string status "QUEUED | EXECUTING | COMPLETED | FAILED"
+        string file_path
+        datetime created_at
+        datetime completed_at
+    }
+    STATIC_RESULTS {
+        int id PK
+        string job_id FK
+        string imphash
+        string compilation_timestamp
+        string architecture
+        int section_count
+        text sections_json
+        text suspicious_strings_json
+    }
+    DYNAMIC_RESULTS {
+        int id PK
+        string job_id FK
+        text behaviors_json
+        boolean emulation_success
+        text error_message
+    }
+    YARA_RULES {
+        int id PK
+        string job_id FK
+        string rule_name
+        text rule_text
+        string validation_status
+        int false_positive_count
+    }
+```
+
+- **jobs**: Core job tracking with `id`, `filename`, `sha256`, `status`, `file_path`, `created_at`, and `completed_at` fields.
+- **static_results**: Static analysis output linked to a job. Stores `imphash`, `compilation_timestamp`, `architecture`, `section_count`, and JSON-encoded section details and suspicious strings.
+- **dynamic_results**: Dynamic analysis output linked to a job. Stores JSON-encoded behavior log, `emulation_success` flag, and `error_message`.
+- **yara_rules**: Generated YARA rules linked to a job. Stores `rule_name`, full `rule_text`, `validation_status`, and `false_positive_count`.
 
 ## Troubleshooting
 
